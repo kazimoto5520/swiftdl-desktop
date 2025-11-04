@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SwiftDL</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+      background: #1e1e1e;
+      color: #e0e0e0;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Title Bar */
+    .titlebar {
+      height: 32px;
+      background: #2d2d30;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      -webkit-app-region: drag;
+      border-bottom: 1px solid #3e3e42;
+    }
+
+    .titlebar-icon {
+      width: 16px;
+      height: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 3px;
+      margin-right: 8px;
+    }
+
+    .titlebar-title {
+      font-size: 12px;
+      font-weight: 400;
+      color: #cccccc;
+      flex: 1;
+    }
+
+    .titlebar-controls {
+      display: flex;
+      gap: 12px;
+      -webkit-app-region: no-drag;
+    }
+
+    .titlebar-button {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .titlebar-button.minimize { background: #ffbd2e; }
+    .titlebar-button.maximize { background: #28c940; }
+    .titlebar-button.close { background: #ff5f56; }
+
+    /* Main Container */
+    .app-container {
+      display: flex;
+      height: calc(100vh - 32px);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 200px;
+      background: #252526;
+      border-right: 1px solid #3e3e42;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #cccccc;
+      transition: background 0.2s;
+    }
+
+    .sidebar-item:hover {
+      background: #2a2d2e;
+    }
+
+    .sidebar-item.active {
+      background: #37373d;
+      border-left: 2px solid #667eea;
+    }
+
+    .sidebar-icon {
+      width: 16px;
+      height: 16px;
+      opacity: 0.8;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #1e1e1e;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      height: 48px;
+      background: #2d2d30;
+      border-bottom: 1px solid #3e3e42;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+    }
+
+    .toolbar-button {
+      padding: 6px 16px;
+      background: #0e639c;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-weight: 500;
+    }
+
+    .toolbar-button:hover {
+      background: #1177bb;
+    }
+
+    .toolbar-button.secondary {
+      background: #3e3e42;
+    }
+
+    .toolbar-button.secondary:hover {
+      background: #4e4e52;
+    }
+
+    /* Download Panel */
+    .download-panel {
+      padding: 20px;
+      background: #252526;
+      border-bottom: 1px solid #3e3e42;
+    }
+
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    .input-label {
+      font-size: 12px;
+      color: #969696;
+      margin-bottom: 6px;
+      display: block;
+      font-weight: 500;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 8px 12px;
+      background: #3c3c3c;
+      border: 1px solid #3e3e42;
+      border-radius: 3px;
+      color: #e0e0e0;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-field:focus {
+      border-color: #667eea;
+    }
+
+    .input-field::placeholder {
+      color: #6e6e6e;
+    }
+
+    .download-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      padding: 10px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      padding: 10px 20px;
+      background: #3e3e42;
+      color: #e0e0e0;
+      border: none;
+      border-radius: 3px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: #4e4e52;
+    }
+
+    /* Downloads List */
+    .downloads-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .download-item {
+      background: #252526;
+      border: 1px solid #3e3e42;
+      border-radius: 4px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+
+    .download-item:hover {
+      border-color: #667eea;
+    }
+
+    .download-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .download-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e0e0e0;
+    }
+
+    .download-status {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-weight: 500;
+    }
+
+    .status-downloading {
+      background: #0e639c;
+      color: #fff;
+    }
+
+    .status-completed {
+      background: #107c10;
+      color: #fff;
+    }
+
+    .status-error {
+      background: #e81123;
+      color: #fff;
+    }
+
+    .download-url {
+      font-size: 12px;
+      color: #969696;
+      margin-bottom: 12px;
+      word-break: break-all;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: #3c3c3c;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .download-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #969696;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1e1e1e;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #3e3e42;
+      border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4e4e52;
+    }
+
+    /* Empty State */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #6e6e6e;
+      gap: 12px;
+    }
+
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      opacity: 0.3;
+    }
+  </style>
+</head>
+<body>
+  <!-- Title Bar -->
+  <div class="titlebar">
+    <div class="titlebar-icon"></div>
+    <div class="titlebar-title">SwiftDL Download Manager</div>
+    <div class="titlebar-controls">
+      <div class="titlebar-button minimize"></div>
+      <div class="titlebar-button maximize"></div>
+      <div class="titlebar-button close"></div>
+    </div>
+  </div>
+
+  <!-- App Container -->
+  <div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-item active">
+        <svg class="sidebar-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/>
+          <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/>
+          <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/>
+        </svg>
+        <span>All Downloads</span>
+      </div>
+      <div class="sidebar-item">
+        <svg class="sidebar-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"/>
+        </svg>
+        <span>In Progress</span>
+      </div>
+      <div class="sidebar-item">
+        <svg class="sidebar-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+        </svg>
+        <span>Completed</span>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <button class="toolbar-button" id="newDownloadBtn">+ New Download</button>
+        <button class="toolbar-button secondary">Pause All</button>
+        <button class="toolbar-button secondary">Resume All</button>
+        <div style="flex: 1;"></div>
+        <button class="toolbar-button secondary">Settings</button>
+      </div>
+
+      <!-- Download Panel -->
+      <div class="download-panel" id="downloadPanel" style="display: none;">
+        <div class="input-group">
+          <label class="input-label">Download URL</label>
+          <input type="text" class="input-field" id="urlInput" placeholder="https://example.com/file.zip">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Save As</label>
+          <input type="text" class="input-field" id="filenameInput" placeholder="file.zip">
+        </div>
+        <div class="download-actions">
+          <button class="btn-primary" id="startDownloadBtn">Start Download</button>
+          <button class="btn-secondary" id="cancelBtn">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Downloads List -->
+      <div class="downloads-list" id="downloadsList">
+        <div class="empty-state">
+          <svg class="empty-icon" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
+          </svg>
+          <div>No downloads yet</div>
+          <div style="font-size: 11px;">Click "New Download" to get started</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const newDownloadBtn = document.getElementById('newDownloadBtn');
+    const downloadPanel = document.getElementById('downloadPanel');
+    const startDownloadBtn = document.getElementById('startDownloadBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const urlInput = document.getElementById('urlInput');
+    const filenameInput = document.getElementById('filenameInput');
+    const downloadsList = document.getElementById('downloadsList');
+
+    const downloads = [];
+
+    newDownloadBtn.addEventListener('click', () => {
+      downloadPanel.style.display = 'block';
+      urlInput.focus();
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      downloadPanel.style.display = 'none';
+      urlInput.value = '';
+      filenameInput.value = '';
+    });
+
+    startDownloadBtn.addEventListener('click', async () => {
+      const url = urlInput.value.trim();
+      const filename = filenameInput.value.trim();
+
+      if (!url || !filename) {
+        alert('Please enter both URL and filename');
+        return;
+      }
+
+      const download = {
+        id: Date.now(),
+        url: url,
+        filename: filename,
+        status: 'downloading',
+        progress: 0
+      };
+
+      downloads.unshift(download);
+      renderDownloads();
+
+      downloadPanel.style.display = 'none';
+      urlInput.value = '';
+      filenameInput.value = '';
+
+      // Call Electron API
+      try {
+        if (window.electronAPI) {
+          const result = await window.electronAPI.startDownload(url, filename);
+          
+          const downloadIndex = downloads.findIndex(d => d.id === download.id);
+          if (downloadIndex !== -1) {
+            if (result.success) {
+              downloads[downloadIndex].status = 'completed';
+              downloads[downloadIndex].progress = 100;
+            } else {
+              downloads[downloadIndex].status = 'error';
+              downloads[downloadIndex].error = result.error;
+            }
+            renderDownloads();
+          }
+        } else {
+          // Simulate download for demo
+          simulateDownload(download.id);
+        }
+      } catch (err) {
+        const downloadIndex = downloads.findIndex(d => d.id === download.id);
+        if (downloadIndex !== -1) {
+          downloads[downloadIndex].status = 'error';
+          downloads[downloadIndex].error = err.message;
+          renderDownloads();
+        }
+      }
+    });
+
+    function simulateDownload(id) {
+      const downloadIndex = downloads.findIndex(d => d.id === id);
+      if (downloadIndex === -1) return;
+
+      const interval = setInterval(() => {
+        downloads[downloadIndex].progress += 10;
+        
+        if (downloads[downloadIndex].progress >= 100) {
+          downloads[downloadIndex].progress = 100;
+          downloads[downloadIndex].status = 'completed';
+          clearInterval(interval);
+        }
+        
+        renderDownloads();
+      }, 500);
+    }
+
+    function renderDownloads() {
+      if (downloads.length === 0) {
+        downloadsList.innerHTML = `
+          <div class="empty-state">
+            <svg class="empty-icon" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
+            </svg>
+            <div>No downloads yet</div>
+            <div style="font-size: 11px;">Click "New Download" to get started</div>
+          </div>
+        `;
+        return;
+      }
+
+      downloadsList.innerHTML = downloads.map(d => {
+        const statusClass = d.status === 'downloading' ? 'status-downloading' : 
+                           d.status === 'completed' ? 'status-completed' : 'status-error';
+        const statusText = d.status === 'downloading' ? 'Downloading' : 
+                          d.status === 'completed' ? 'Completed' : 'Error';
+
+        return `
+          <div class="download-item">
+            <div class="download-header">
+              <div class="download-name">${d.filename}</div>
+              <div class="download-status ${statusClass}">${statusText}</div>
+            </div>
+            <div class="download-url">${d.url}</div>
+            ${d.status !== 'error' ? `
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${d.progress}%"></div>
+              </div>
+              <div class="download-info">
+                <span>${d.progress}%</span>
+                <span>${d.status === 'completed' ? 'Download complete' : 'Downloading...'}</span>
+              </div>
+            ` : `
+              <div style="color: #e81123; font-size: 12px; margin-top: 8px;">
+                ${d.error || 'Download failed'}
+              </div>
+            `}
+          </div>
+        `;
+      }).join('');
+    }
+
+    renderDownloads();
+  </script>
+</body>
+</html>

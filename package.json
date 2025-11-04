@@ -1,0 +1,25 @@
+{
+  "name": "swiftdl-desktop",
+  "version": "1.0.0",
+  "main": "dist/app/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "build": "tsc && cpx \"src/renderer/**/*\" dist/renderer",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "cpx": "^1.5.0",
+    "electron": "^39.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}

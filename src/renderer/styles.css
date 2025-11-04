@@ -1,0 +1,103 @@
+/* Reset and global */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #4e54c8, #8f94fb);
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Container */
+.container {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 40px 50px;
+  border-radius: 20px;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+  text-align: center;
+  width: 500px;
+}
+
+/* Heading */
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 30px;
+  text-shadow: 1px 1px 10px rgba(0,0,0,0.3);
+}
+
+/* Form inputs */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+input {
+  padding: 15px 20px;
+  border-radius: 12px;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  transition: 0.3s;
+}
+
+input::placeholder {
+  color: rgba(255,255,255,0.7);
+}
+
+input:focus {
+  background: rgba(255,255,255,0.25);
+  box-shadow: 0 0 10px rgba(255,255,255,0.3);
+}
+
+/* Button */
+button {
+  padding: 15px 20px;
+  border-radius: 12px;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: #6a82fb;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+}
+
+button:hover {
+  background: #fc5c7d;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+/* Progress */
+.progress {
+  margin-top: 25px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  min-height: 30px;
+  text-shadow: 0 1px 5px rgba(0,0,0,0.4);
+}
+
+/* Responsive */
+@media (max-width: 550px) {
+  .container {
+    width: 90%;
+    padding: 30px;
+  }
+  input {
+    width: 100%;
+  }
+}

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>SwiftDL</title>
@@ -58,9 +59,17 @@
       cursor: pointer;
     }
 
-    .titlebar-button.minimize { background: #ffbd2e; }
-    .titlebar-button.maximize { background: #28c940; }
-    .titlebar-button.close { background: #ff5f56; }
+    .titlebar-button.minimize {
+      background: #ffbd2e;
+    }
+
+    .titlebar-button.maximize {
+      background: #28c940;
+    }
+
+    .titlebar-button.close {
+      background: #ff5f56;
+    }
 
     /* Main Container */
     .app-container {
@@ -362,6 +371,7 @@
     }
   </style>
 </head>
+
 <body>
   <!-- Title Bar -->
   <div class="titlebar">
@@ -380,21 +390,23 @@
     <div class="sidebar">
       <div class="sidebar-item active">
         <svg class="sidebar-icon" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/>
-          <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/>
-          <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/>
+          <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z" />
+          <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z" />
+          <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z" />
         </svg>
         <span>All Downloads</span>
       </div>
       <div class="sidebar-item">
         <svg class="sidebar-icon" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"/>
+          <path fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" />
         </svg>
         <span>In Progress</span>
       </div>
       <div class="sidebar-item">
         <svg class="sidebar-icon" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+          <path fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
         </svg>
         <span>Completed</span>
       </div>
@@ -431,7 +443,8 @@
       <div class="downloads-list" id="downloadsList">
         <div class="empty-state">
           <svg class="empty-icon" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
+            <path fill-rule="evenodd"
+              d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" />
           </svg>
           <div>No downloads yet</div>
           <div style="font-size: 11px;">Click "New Download" to get started</div>
@@ -496,7 +509,7 @@
       try {
         console.log('[Renderer] Starting download:', url, filename);
         const result = await window.electronAPI.startDownload(url, filename);
-        
+
         const downloadIndex = downloads.findIndex(d => d.id === download.id);
         if (downloadIndex !== -1) {
           if (result.success) {
@@ -562,19 +575,24 @@
       }
 
       downloadsList.innerHTML = downloads.map(d => {
-        const statusClass = d.status === 'downloading' ? 'status-downloading' : 
-                           d.status === 'completed' ? 'status-completed' : 'status-error';
-        const statusText = d.status === 'downloading' ? 'Downloading' : 
-                          d.status === 'completed' ? 'Completed' : 'Error';
+        const statusClass = d.status === 'downloading' ? 'status-downloading' :
+          d.status === 'completed' ? 'status-completed' : 'status-error';
+        const statusText = d.status === 'downloading' ? 'Downloading' :
+          d.status === 'completed' ? 'Completed' : 'Error';
 
-        const sizeInfo = d.total > 0 
+        const sizeInfo = d.total > 0
           ? `${formatBytes(d.downloaded)} / ${formatBytes(d.total)}`
           : d.status === 'completed' ? 'Download complete' : 'Preparing...';
 
         return `
           <div class="download-item">
             <div class="download-header">
-              <div class="download-name">${d.filename}</div>
+              <div class="download-name">
+    ${d.filename}
+    <div style="font-size:11px;color:#888;margin-top:2px;">
+      ${d.createdAt ? new Date(d.createdAt).toLocaleString() : ""}
+    </div>
+  </div>
               <div class="download-status ${statusClass}">${statusText}</div>
             </div>
             <div class="download-url">${d.url}</div>
@@ -597,6 +615,33 @@
     }
 
     renderDownloads();
+
+    async function loadHistoryAndRender() {
+      if (!window.electronAPI?.loadHistory) return;
+
+      const history = await window.electronAPI.loadHistory();
+      if (!history || !Array.isArray(history)) return;
+
+      // Convert history to download models
+      history.reverse().forEach(h => {
+        downloads.push({
+          id: nextId++,
+          url: h.url,
+          filename: h.filename,
+          status: "completed",
+          progress: 100,
+          downloaded: 0,
+          total: 0,
+          speed: "",
+          createdAt: h.date,
+        });
+      });
+
+      renderDownloads();
+    }
+
+    loadHistoryAndRender();
   </script>
 </body>
+
 </html>

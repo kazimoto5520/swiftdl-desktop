@@ -18,5 +18,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("download-progress", (_event, data) => {
       callback(data);
     });
-  }
+  },  
+
+  loadHistory: () => ipcRenderer.invoke("load-history"),
 })

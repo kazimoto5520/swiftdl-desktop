@@ -43,3 +43,13 @@ ipcMain.handle("start-download", async (event, url: string, filename: string) =>
     return { success: false, error: err.message };
   }
 });
+
+ipcMain.handle("load-history", () => {
+  try {
+    return loadHistory();
+  } catch (err: any) {
+    console.error("[Main] Load history error:", err);
+    return [];
+  }
+});
+

@@ -5,6 +5,7 @@ import fetch from 'node-fetch';
 import { loadMetadata, saveMetadata } from './metadata';
 import { DownloadMetadata, SegmentInfo } from './types';
 import { TEMP_DIR, log } from './utils';
+import { BrowserWindow } from 'electron';
 
 const DEFAULT_SEGMENTS = 8;
 const MAX_RETRIES = 3;
@@ -12,6 +13,48 @@ const MAX_RETRIES = 3;
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false
 });
+
+let lastProgressUpdate = 0;
+const PROGRESS_UPDATE_INTERVAL = 500; // Update UI every 500ms
+
+// Send progress to renderer
+function sendProgress(filename: string, downloaded: number, total: number) {
+  const now = Date.now();
+  if (now - lastProgressUpdate < PROGRESS_UPDATE_INTERVAL) return;
+  
+  lastProgressUpdate = now;
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win) {
+    const progress = (downloaded / total) * 100;
+    win.webContents.send("download-progress", {
+      filename,
+      progress,
+      downloaded,
+      total,
+      speed: calculateSpeed(downloaded)
+    });
+  }
+}
+
+let lastBytes = 0;
+let lastTime = Date.now();
+
+function calculateSpeed(currentBytes: number): string {
+  const now = Date.now();
+  const timeDiff = (now - lastTime) / 1000; // seconds
+  const bytesDiff = currentBytes - lastBytes;
+  
+  if (timeDiff > 0) {
+    const speed = bytesDiff / timeDiff;
+    lastBytes = currentBytes;
+    lastTime = now;
+    
+    if (speed < 1024) return `${speed.toFixed(0)} B/s`;
+    if (speed < 1024 * 1024) return `${(speed / 1024).toFixed(2)} KB/s`;
+    return `${(speed / (1024 * 1024)).toFixed(2)} MB/s`;
+  }
+  return '';
+}
 
 // Get file size
 async function getContentLength(url: string): Promise<number> {
@@ -56,6 +99,9 @@ async function downloadSegment(url: string, segment: SegmentInfo, meta: Download
     // Update total progress
     const totalDownloaded = meta.segments.reduce((a, s) => a + s.downloaded, 0);
     showProgress(totalDownloaded, meta.totalSize);
+    
+    // Send progress to UI
+    sendProgress(meta.filename, totalDownloaded, meta.totalSize);
 
     // Save metadata periodically
     saveMetadata(meta);
@@ -73,7 +119,7 @@ async function downloadSegmentWithRetry(url: string, segment: SegmentInfo, meta:
     } catch (err: any) {
       console.error(`\nSegment ${segment.tempPath} failed (${i + 1}/${MAX_RETRIES}): ${err.message}`);
       if (i === MAX_RETRIES - 1) throw err;
-      await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i))); // exponential backoff
+      await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
     }
   }
 }
@@ -111,7 +157,7 @@ function merge(meta: DownloadMetadata) {
   for (const seg of meta.segments) {
     const data = fs.readFileSync(seg.tempPath);
     fs.writeSync(output, data);
-    fs.unlinkSync(seg.tempPath); // cleanup temp file after merge
+    fs.unlinkSync(seg.tempPath);
   }
 
   fs.closeSync(output);
@@ -122,6 +168,9 @@ function merge(meta: DownloadMetadata) {
 
 // Main download function
 export async function segmentedDownload(url: string, filename: string, parts = DEFAULT_SEGMENTS) {
+  lastBytes = 0;
+  lastTime = Date.now();
+  
   let meta = loadMetadata(filename);
 
   if (!meta) {
@@ -133,11 +182,18 @@ export async function segmentedDownload(url: string, filename: string, parts = D
     log("✅ Resuming existing download");
   }
 
-  // ✅ Parallel download of all segments
+  // Send initial progress
+  const totalDownloaded = meta.segments.reduce((a, s) => a + s.downloaded, 0);
+  sendProgress(filename, totalDownloaded, meta.totalSize);
+
   await Promise.all(
     meta.segments.map(seg => downloadSegmentWithRetry(url, seg, meta))
   );
 
   merge(meta);
+  
+  // Send final progress
+  sendProgress(filename, meta.totalSize, meta.totalSize);
+  
   log("✅ Download completed");
 }

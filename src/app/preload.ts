@@ -1,6 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-// Expose API with logging
 contextBridge.exposeInMainWorld("electronAPI", {
   startDownload: async (url: string, filename: string) => {
     console.log("[Preload] startDownload called", url, filename);
@@ -12,5 +11,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
       console.error("[Preload] Error invoking IPC:", err);
       throw err;
     }
+  },
+  
+  // Listen for progress updates
+  onDownloadProgress: (callback: (data: any) => void) => {
+    ipcRenderer.on("download-progress", (_event, data) => {
+      callback(data);
+    });
   }
-});
+})

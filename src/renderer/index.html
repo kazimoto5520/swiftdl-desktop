@@ -209,6 +209,12 @@
       box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
 
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
     .btn-secondary {
       padding: 10px 20px;
       background: #3e3e42;
@@ -255,6 +261,11 @@
       font-size: 14px;
       font-weight: 600;
       color: #e0e0e0;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-right: 12px;
     }
 
     .download-status {
@@ -262,6 +273,7 @@
       padding: 4px 8px;
       border-radius: 3px;
       font-weight: 500;
+      white-space: nowrap;
     }
 
     .status-downloading {
@@ -307,6 +319,11 @@
       justify-content: space-between;
       font-size: 12px;
       color: #969696;
+    }
+
+    .download-speed {
+      color: #667eea;
+      font-weight: 500;
     }
 
     /* Scrollbar */
@@ -433,6 +450,7 @@
     const downloadsList = document.getElementById('downloadsList');
 
     const downloads = [];
+    let nextId = 1;
 
     newDownloadBtn.addEventListener('click', () => {
       downloadPanel.style.display = 'block';
@@ -455,11 +473,14 @@
       }
 
       const download = {
-        id: Date.now(),
+        id: nextId++,
         url: url,
         filename: filename,
         status: 'downloading',
-        progress: 0
+        progress: 0,
+        speed: '0 KB/s',
+        downloaded: 0,
+        total: 0
       };
 
       downloads.unshift(download);
@@ -469,51 +490,61 @@
       urlInput.value = '';
       filenameInput.value = '';
 
-      // Call Electron API
+      // Disable button during download
+      startDownloadBtn.disabled = true;
+
       try {
-        if (window.electronAPI) {
-          const result = await window.electronAPI.startDownload(url, filename);
-          
-          const downloadIndex = downloads.findIndex(d => d.id === download.id);
-          if (downloadIndex !== -1) {
-            if (result.success) {
-              downloads[downloadIndex].status = 'completed';
-              downloads[downloadIndex].progress = 100;
-            } else {
-              downloads[downloadIndex].status = 'error';
-              downloads[downloadIndex].error = result.error;
-            }
-            renderDownloads();
+        console.log('[Renderer] Starting download:', url, filename);
+        const result = await window.electronAPI.startDownload(url, filename);
+        
+        const downloadIndex = downloads.findIndex(d => d.id === download.id);
+        if (downloadIndex !== -1) {
+          if (result.success) {
+            downloads[downloadIndex].status = 'completed';
+            downloads[downloadIndex].progress = 100;
+            downloads[downloadIndex].speed = '';
+            console.log('[Renderer] Download completed:', filename);
+          } else {
+            downloads[downloadIndex].status = 'error';
+            downloads[downloadIndex].error = result.error;
+            console.error('[Renderer] Download failed:', result.error);
           }
-        } else {
-          // Simulate download for demo
-          simulateDownload(download.id);
+          renderDownloads();
         }
       } catch (err) {
+        console.error('[Renderer] Download error:', err);
         const downloadIndex = downloads.findIndex(d => d.id === download.id);
         if (downloadIndex !== -1) {
           downloads[downloadIndex].status = 'error';
           downloads[downloadIndex].error = err.message;
           renderDownloads();
         }
+      } finally {
+        startDownloadBtn.disabled = false;
       }
     });
 
-    function simulateDownload(id) {
-      const downloadIndex = downloads.findIndex(d => d.id === id);
-      if (downloadIndex === -1) return;
-
-      const interval = setInterval(() => {
-        downloads[downloadIndex].progress += 10;
-        
-        if (downloads[downloadIndex].progress >= 100) {
-          downloads[downloadIndex].progress = 100;
-          downloads[downloadIndex].status = 'completed';
-          clearInterval(interval);
+    // Listen for progress updates from main process (if implemented)
+    if (window.electronAPI && window.electronAPI.onDownloadProgress) {
+      window.electronAPI.onDownloadProgress((data) => {
+        console.log('[Renderer] Progress update:', data);
+        const download = downloads.find(d => d.filename === data.filename);
+        if (download && download.status === 'downloading') {
+          download.progress = data.progress;
+          download.downloaded = data.downloaded;
+          download.total = data.total;
+          download.speed = data.speed || '';
+          renderDownloads();
         }
-        
-        renderDownloads();
-      }, 500);
+      });
+    }
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
 
     function renderDownloads() {
@@ -536,6 +567,10 @@
         const statusText = d.status === 'downloading' ? 'Downloading' : 
                           d.status === 'completed' ? 'Completed' : 'Error';
 
+        const sizeInfo = d.total > 0 
+          ? `${formatBytes(d.downloaded)} / ${formatBytes(d.total)}`
+          : d.status === 'completed' ? 'Download complete' : 'Preparing...';
+
         return `
           <div class="download-item">
             <div class="download-header">
@@ -548,8 +583,8 @@
                 <div class="progress-fill" style="width: ${d.progress}%"></div>
               </div>
               <div class="download-info">
-                <span>${d.progress}%</span>
-                <span>${d.status === 'completed' ? 'Download complete' : 'Downloading...'}</span>
+                <span>${d.progress.toFixed(1)}% ${d.speed ? '• <span class="download-speed">' + d.speed + '</span>' : ''}</span>
+                <span>${sizeInfo}</span>
               </div>
             ` : `
               <div style="color: #e81123; font-size: 12px; margin-top: 8px;">

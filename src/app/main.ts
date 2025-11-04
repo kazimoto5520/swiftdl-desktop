@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import { segmentedDownload } from "../downloader";
 import { loadHistory, saveHistory } from "../utils";
+import { startNativeHost } from "../native-host";
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -22,6 +23,29 @@ function createWindow() {
 app.whenReady().then(() => {
   console.log("[Main] App ready");
   createWindow();
+
+  startNativeHost(async (msg) => {
+    console.log("[Native Host] Message:", msg);
+
+    if (msg?.type === "download") {
+      const { url, filename } = msg;
+      console.log("[Native Host] Request download", url, filename);
+
+      try {
+        await segmentedDownload(url, filename);
+
+        // ✅ Add to history
+        const history = loadHistory();
+        history.push({ url, filename, date: new Date().toISOString() });
+        saveHistory(history);
+
+        console.log("[Native Host] Download complete");
+      } catch (err: any) {
+        console.error("[Native Host] Download error:", err);
+      }
+    }
+  });
+
 });
 
 // IPC to start download

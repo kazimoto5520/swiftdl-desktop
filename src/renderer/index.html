@@ -290,6 +290,11 @@
       color: #fff;
     }
 
+    .status-paused {
+      background: #ff8c00;
+      color: #fff;
+    }
+
     .status-completed {
       background: #107c10;
       color: #fff;
@@ -297,6 +302,11 @@
 
     .status-error {
       background: #e81123;
+      color: #fff;
+    }
+
+    .status-canceled {
+      background: #6e6e6e;
       color: #fff;
     }
 
@@ -333,6 +343,41 @@
     .download-speed {
       color: #667eea;
       font-weight: 500;
+    }
+
+    .download-controls {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .control-button {
+      padding: 6px 12px;
+      font-size: 11px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+
+    .control-button:hover {
+      opacity: 0.8;
+    }
+
+    .control-button.pause {
+      background: #ff8c00;
+      color: #fff;
+    }
+
+    .control-button.resume {
+      background: #28c940;
+      color: #fff;
+    }
+
+    .control-button.cancel {
+      background: #e81123;
+      color: #fff;
     }
 
     /* Scrollbar */
@@ -417,8 +462,6 @@
       <!-- Toolbar -->
       <div class="toolbar">
         <button class="toolbar-button" id="newDownloadBtn">+ New Download</button>
-        <button class="toolbar-button secondary">Pause All</button>
-        <button class="toolbar-button secondary">Resume All</button>
         <div style="flex: 1;"></div>
         <button class="toolbar-button secondary">Settings</button>
       </div>
@@ -503,7 +546,6 @@
       urlInput.value = '';
       filenameInput.value = '';
 
-      // Disable button during download
       startDownloadBtn.disabled = true;
 
       try {
@@ -512,11 +554,14 @@
 
         const downloadIndex = downloads.findIndex(d => d.id === download.id);
         if (downloadIndex !== -1) {
-          if (result.success) {
+          if (result.success && !result.paused) {
             downloads[downloadIndex].status = 'completed';
             downloads[downloadIndex].progress = 100;
             downloads[downloadIndex].speed = '';
             console.log('[Renderer] Download completed:', filename);
+          } else if (result.paused) {
+            downloads[downloadIndex].status = 'paused';
+            console.log('[Renderer] Download paused:', filename);
           } else {
             downloads[downloadIndex].status = 'error';
             downloads[downloadIndex].error = result.error;
@@ -537,7 +582,7 @@
       }
     });
 
-    // Listen for progress updates from main process (if implemented)
+    // Listen for progress updates
     if (window.electronAPI && window.electronAPI.onDownloadProgress) {
       window.electronAPI.onDownloadProgress((data) => {
         console.log('[Renderer] Progress update:', data);
@@ -550,6 +595,71 @@
           renderDownloads();
         }
       });
+    }
+
+    // Listen for status updates
+    if (window.electronAPI && window.electronAPI.onDownloadStatus) {
+      window.electronAPI.onDownloadStatus((data) => {
+        console.log('[Renderer] Status update:', data);
+        const download = downloads.find(d => d.filename === data.filename);
+        if (download) {
+          download.status = data.status;
+          if (data.message) {
+            download.error = data.message;
+          }
+          renderDownloads();
+        }
+      });
+    }
+
+    // Control button handlers
+    async function handlePause(filename) {
+      try {
+        const result = await window.electronAPI.pauseDownload(filename);
+        if (result.success) {
+          const download = downloads.find(d => d.filename === filename);
+          if (download) {
+            download.status = 'paused';
+            renderDownloads();
+          }
+        }
+      } catch (err) {
+        console.error('Pause error:', err);
+      }
+    }
+
+    async function handleResume(filename) {
+      try {
+        const result = await window.electronAPI.resumeDownload(filename);
+        if (result.success) {
+          const download = downloads.find(d => d.filename === filename);
+          if (download) {
+            download.status = 'downloading';
+            renderDownloads();
+          }
+        }
+      } catch (err) {
+        console.error('Resume error:', err);
+      }
+    }
+
+    async function handleCancel(filename) {
+      if (!confirm('Are you sure you want to cancel this download?')) {
+        return;
+      }
+      
+      try {
+        const result = await window.electronAPI.cancelDownload(filename);
+        if (result.success) {
+          const download = downloads.find(d => d.filename === filename);
+          if (download) {
+            download.status = 'canceled';
+            renderDownloads();
+          }
+        }
+      } catch (err) {
+        console.error('Cancel error:', err);
+      }
     }
 
     function formatBytes(bytes) {
@@ -575,28 +685,37 @@
       }
 
       downloadsList.innerHTML = downloads.map(d => {
-        const statusClass = d.status === 'downloading' ? 'status-downloading' :
-          d.status === 'completed' ? 'status-completed' : 'status-error';
-        const statusText = d.status === 'downloading' ? 'Downloading' :
-          d.status === 'completed' ? 'Completed' : 'Error';
+        const statusClass = 
+          d.status === 'downloading' ? 'status-downloading' :
+          d.status === 'paused' ? 'status-paused' :
+          d.status === 'completed' ? 'status-completed' : 
+          d.status === 'canceled' ? 'status-canceled' : 'status-error';
+        
+        const statusText = 
+          d.status === 'downloading' ? 'Downloading' :
+          d.status === 'paused' ? 'Paused' :
+          d.status === 'completed' ? 'Completed' : 
+          d.status === 'canceled' ? 'Canceled' : 'Error';
 
         const sizeInfo = d.total > 0
           ? `${formatBytes(d.downloaded)} / ${formatBytes(d.total)}`
           : d.status === 'completed' ? 'Download complete' : 'Preparing...';
 
+        const showControls = d.status === 'downloading' || d.status === 'paused';
+
         return `
           <div class="download-item">
             <div class="download-header">
               <div class="download-name">
-    ${d.filename}
-    <div style="font-size:11px;color:#888;margin-top:2px;">
-      ${d.createdAt ? new Date(d.createdAt).toLocaleString() : ""}
-    </div>
-  </div>
+                ${d.filename}
+                <div style="font-size:11px;color:#888;margin-top:2px;">
+                  ${d.createdAt ? new Date(d.createdAt).toLocaleString() : ""}
+                </div>
+              </div>
               <div class="download-status ${statusClass}">${statusText}</div>
             </div>
             <div class="download-url">${d.url}</div>
-            ${d.status !== 'error' ? `
+            ${d.status !== 'error' && d.status !== 'canceled' ? `
               <div class="progress-bar">
                 <div class="progress-fill" style="width: ${d.progress}%"></div>
               </div>
@@ -604,11 +723,26 @@
                 <span>${d.progress.toFixed(1)}% ${d.speed ? '• <span class="download-speed">' + d.speed + '</span>' : ''}</span>
                 <span>${sizeInfo}</span>
               </div>
-            ` : `
+            ` : d.status === 'error' ? `
               <div style="color: #e81123; font-size: 12px; margin-top: 8px;">
                 ${d.error || 'Download failed'}
               </div>
+            ` : `
+              <div style="color: #969696; font-size: 12px; margin-top: 8px;">
+                Download was canceled
+              </div>
             `}
+            ${showControls ? `
+              <div class="download-controls">
+                ${d.status === 'downloading' ? `
+                  <button class="control-button pause" onclick="handlePause('${d.filename}')">⏸ Pause</button>
+                ` : ''}
+                ${d.status === 'paused' ? `
+                  <button class="control-button resume" onclick="handleResume('${d.filename}')">▶ Resume</button>
+                ` : ''}
+                <button class="control-button cancel" onclick="handleCancel('${d.filename}')">✕ Cancel</button>
+              </div>
+            ` : ''}
           </div>
         `;
       }).join('');
@@ -622,7 +756,6 @@
       const history = await window.electronAPI.loadHistory();
       if (!history || !Array.isArray(history)) return;
 
-      // Convert history to download models
       history.reverse().forEach(h => {
         downloads.push({
           id: nextId++,

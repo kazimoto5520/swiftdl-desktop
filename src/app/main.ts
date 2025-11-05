@@ -1,8 +1,12 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
+import fs from "fs";
 import { segmentedDownload } from "../downloader";
 import { loadHistory, saveHistory } from "../utils";
 import { startNativeHost } from "../native-host";
+import { loadMetadata } from "../metadata";
+
+const controllers: { [key: string]: AbortController } = {};
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -76,4 +80,38 @@ ipcMain.handle("load-history", () => {
     return [];
   }
 });
+
+ipcMain.handle("pause-download", (e, filename) => {
+  if (controllers[filename]) {
+    controllers[filename].abort();
+    console.log("Paused:", filename);
+    return { success: true };
+  }
+  return { success: false };
+});
+
+ipcMain.handle("resume-download", async (e, filename) => {
+  const meta = loadMetadata(filename);
+  if (!meta) return { success: false, error: "No metadata" };
+
+  await segmentedDownload(meta.url, filename);
+  return { success: true };
+});
+
+ipcMain.handle("cancel-download", (e, filename) => {
+  if (controllers[filename]) controllers[filename].abort();
+
+  const meta = loadMetadata(filename);
+  if (!meta) return { success: true };
+
+  // delete metadata + temporary files
+  meta.segments.forEach(seg => {
+    if (fs.existsSync(seg.tempPath)) fs.unlinkSync(seg.tempPath);
+  });
+
+  // deleteMetadata(filename);
+
+  return { success: true };
+});
+
 
